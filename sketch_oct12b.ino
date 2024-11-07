@@ -1,20 +1,41 @@
+#define PIN_ENA 9 // Вывод управления скоростью вращения мотора №1
+#define PIN_ENB 3 // Вывод управления скоростью вращения мотора №2
+#define PIN_IN1 6 // Вывод управления направлением вращения мотора №1
+#define PIN_IN2 7 // Вывод управления направлением вращения мотора №1
+#define PIN_IN3 5 // Вывод управления направлением вращения мотора №2
+#define PIN_IN4 4 // Вывод управления направлением вращения мотора №2
+
+
+
+
 
 #include <Arduino.h>
 #include <stdlib.h>
 
-#define BUFFER_SIZE 5
+#define BUFFER_SIZE 6
 
 int val;
-int LED = 13;
-int ANALOGLED = 3;
-
+// int LED = 13;
+// int ANALOGLED = 3;
+int move;
 char *buffer;
 
 void setup() {
+  pinMode(PIN_ENA, OUTPUT);
+  pinMode(PIN_ENB, OUTPUT);
+  pinMode(PIN_IN1, OUTPUT);
+  pinMode(PIN_IN2, OUTPUT);
+  pinMode(PIN_IN3, OUTPUT);
+  pinMode(PIN_IN4, OUTPUT);
+  // Команда остановки двум моторам
+  digitalWrite(PIN_IN1, HIGH);
+  digitalWrite(PIN_IN2, LOW);
+  digitalWrite(PIN_IN3, LOW);
+  digitalWrite(PIN_IN4, HIGH);
   Serial.begin(9600);
-  pinMode(LED, OUTPUT);
-  digitalWrite(LED, HIGH);
-  pinMode(ANALOGLED, OUTPUT);
+  // pinMode(LED, OUTPUT);
+  // digitalWrite(LED, HIGH);
+  // pinMode(ANALOGLED, OUTPUT);
 
   buffer = (char *)malloc(BUFFER_SIZE * sizeof(char));
 
@@ -27,8 +48,8 @@ void setup() {
 int asciitoint(char *string) {
     char *buffer = (char *)malloc(sizeof(char) * 3);
 
-    for (int i = 1; i < 4; i++) {
-        buffer[i-1] = string[i];
+    for (int i = 2; i < 5; i++) {
+        buffer[i-2] = string[i];
     }
 
     int result = 0;
@@ -42,21 +63,58 @@ int asciitoint(char *string) {
     return result;
 }
 
+int parseMove(char *buffer) {
+  switch (buffer[1]) {
+    case 'U':
+      digitalWrite(PIN_IN1, HIGH);
+      digitalWrite(PIN_IN2, LOW);
+      digitalWrite(PIN_IN3, HIGH);
+      digitalWrite(PIN_IN4, LOW);
+      return 0;
+    case 'D':
+      digitalWrite(PIN_IN1, LOW);
+      digitalWrite(PIN_IN2, HIGH);
+      digitalWrite(PIN_IN3, LOW);
+      digitalWrite(PIN_IN4, HIGH);
+      return 1;
+    case 'R':
+      digitalWrite(PIN_IN1, LOW);
+      digitalWrite(PIN_IN2, HIGH);
+      digitalWrite(PIN_IN3, HIGH);
+      digitalWrite(PIN_IN4, LOW);
+      return 2;
+    case 'L':
+      digitalWrite(PIN_IN1, HIGH);
+      digitalWrite(PIN_IN2, LOW);
+      digitalWrite(PIN_IN3, LOW);
+      digitalWrite(PIN_IN4, HIGH);
+      return 2;
+    case 'S':
+      digitalWrite(PIN_IN1, LOW);
+      digitalWrite(PIN_IN2, LOW);
+      digitalWrite(PIN_IN3, LOW);
+      digitalWrite(PIN_IN4, LOW);
+      return -1;
+  }
+}
+
 int parseSpeed(char *buffer) {
     int result = asciitoint(buffer); 
     return result;
 }
 
 void loop() {
-  if (Serial.available() >= 5) {
+  if (Serial.available() >= BUFFER_SIZE) {
       
     for (int i = 0; i < BUFFER_SIZE; i++) {
       buffer[i] = Serial.read();
     }
 
+    move = parseMove(buffer);
     int PWM = parseSpeed(buffer);
-    analogWrite(ANALOGLED, PWM);
-    delay(0.5);
+    analogWrite(PIN_ENA, PWM);
+    analogWrite(PIN_ENB, PWM);
+
   }
 
   Serial.println();
@@ -67,9 +125,14 @@ void loop() {
   Serial.print(buffer[2]);
   Serial.print(buffer[3]);
   Serial.print(buffer[4]);
+  Serial.print(buffer[5]);
+  Serial.println();
+  Serial.print(move);
   Serial.println();
   Serial.println();
 }
+
+
 
 
 
